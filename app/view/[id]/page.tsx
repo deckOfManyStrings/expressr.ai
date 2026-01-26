@@ -58,11 +58,27 @@ export default function ViewPage({ params }: { params: { id: string } }) {
         { name: "Disgusted", emoji: "🤢" },
     ]
 
+    const handleCheckout = async () => {
+        try {
+            setLoading(true) // Using page loading state or create a specific one
+            const res = await fetch("/api/checkout/create", {
+                method: "POST",
+                body: JSON.stringify({ jobId: job.id }),
+            })
+            const { url, error } = await res.json()
+            if (error) throw new Error(error)
+            if (url) window.location.href = url
+        } catch (err) {
+            toast.error("Checkout failed. Please try again.")
+            setLoading(false)
+        }
+    }
+
     return (
         <div className="min-h-screen bg-background pb-20">
             <header className="border-b px-6 py-4 flex justify-between items-center sticky top-0 bg-background/80 backdrop-blur-md z-10">
                 <span className="font-bold text-lg">Expressr.ai</span>
-                {!isPaid && <Button size="sm">Get Full Pack $9.99</Button>}
+                {!isPaid && <Button size="sm" onClick={handleCheckout}>Get Full Pack $9.99</Button>}
                 {isPaid && <Button variant="outline" size="sm">Download PDF</Button>}
             </header>
 
@@ -136,7 +152,7 @@ export default function ViewPage({ params }: { params: { id: string } }) {
                                     <div className="text-xs flex items-center justify-end gap-1"><Check className="w-3 h-3 text-green-500" /> PDF Pack</div>
                                 </div>
                             </div>
-                            <Button className="w-full h-12 text-lg shadow-xl shadow-primary/20">
+                            <Button className="w-full h-12 text-lg shadow-xl shadow-primary/20" onClick={handleCheckout}>
                                 Unlock Full Pack <ArrowRight className="ml-2 w-4 h-4" />
                             </Button>
                         </Card>
