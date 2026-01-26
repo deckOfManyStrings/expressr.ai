@@ -8,23 +8,78 @@ import { ArrowLeft, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
 
+// ... imports
+import { createClient } from "@/lib/supabase/client"
+import { useRouter } from "next/navigation"
+
+// ...
+
 function CreatePageContent() {
     const searchParams = useSearchParams()
     const email = searchParams.get("email")
+    const router = useRouter()
     const [files, setFiles] = useState<File[]>([])
+    const [isUploading, setIsUploading] = useState(false)
 
     const handleUpload = (uploadedFiles: File[]) => {
         setFiles(uploadedFiles)
     }
 
-    const handleGenerate = () => {
+    const handleGenerate = async () => {
         if (files.length < 10) {
             toast.error("Please upload at least 10 photos")
             return
         }
-        // TODO: Implement API call
-        toast.success("Starting training... (Day 2 task)")
+
+        setIsUploading(true)
+        const toastId = toast.loading("Creating job...")
+
+        try {
+            // 1. Create Job
+            const res = await fetch("/api/jobs/create", {
+                method: "POST",
+                body: JSON.stringify({ email, fileCount: files.length }),
+            })
+
+            if (!res.ok) throw new Error("Failed to create job")
+            const { jobId } = await res.json()
+
+            // 2. Upload Files
+            toast.loading("Uploading photos...", { id: toastId })
+            const supabase = createClient()
+
+            const uploadPromises = files.map(async (file, index) => {
+                const ext = file.name.split(".").pop()
+                const path = `${jobId}/${index}.${ext}`
+
+                const { error } = await supabase.storage
+                    .from("uploads")
+                    .upload(path, file)
+
+                if (error) throw error
+                return path
+            })
+
+            await Promise.all(uploadPromises)
+
+            // 3. Start Training (Day 2)
+            await fetch("/api/jobs/train", {
+                method: "POST",
+                body: JSON.stringify({ jobId })
+            })
+
+            toast.success("Photos uploaded!", { id: toastId })
+            router.push(`/status/${jobId}`)
+
+        } catch (error) {
+            console.error(error)
+            toast.error("Something went wrong", { id: toastId })
+            setIsUploading(false)
+        }
     }
+
+    // ... rest of component
+
 
     return (
         <main className="flex-1 max-w-md mx-auto w-full p-6 space-y-8">
