@@ -8,7 +8,7 @@ import { Loader2, AlertCircle, CheckCircle2, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 type JobStatus = {
-    status: "training" | "generating" | "complete" | "failed"
+    status: "validating" | "training" | "generating" | "generating_free" | "generating_premium" | "complete" | "complete_free" | "completed_free" | "failed"
     progress: number
     message?: string
     error?: string
@@ -148,14 +148,14 @@ export default function StatusPage() {
                                 </span>
                             </div>
                             <div className="flex items-center gap-3 text-sm">
-                                {jobState.status === "generating" ? (
+                                {jobState.status === "generating" || jobState.status === "generating_free" || jobState.status === "generating_premium" ? (
                                     <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                                ) : jobState.status === "complete" ? (
-                                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                ) : (
+                                ) : jobState.status === "training" || jobState.status === "validating" ? (
                                     <div className="w-4 h-4 rounded-full border-2 border-muted" />
+                                ) : (
+                                    <CheckCircle2 className="w-4 h-4 text-green-500" />
                                 )}
-                                <span className={jobState.status === "generating" ? "text-foreground font-medium" : "text-muted-foreground"}>
+                                <span className={jobState.status === "generating" || jobState.status === "generating_free" || jobState.status === "generating_premium" ? "text-foreground font-medium" : "text-muted-foreground"}>
                                     Generating 12 Expressions
                                 </span>
                             </div>

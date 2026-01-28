@@ -1,21 +1,17 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, Loader2, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import ReactConfetti from "react-confetti"
 
-export default function SuccessPage() {
+function SuccessContent() {
     const searchParams = useSearchParams()
     const jobId = searchParams.get("job_id")
     const router = useRouter()
     const [verifying, setVerifying] = useState(true)
-
-    // Optional: We could verify payment status here, 
-    // but the webhook should handle the DB update.
-    // We'll just wait a moment and assume success if they got here via Stripe success_url.
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -63,5 +59,17 @@ export default function SuccessPage() {
                 </div>
             </div>
         </div>
+    )
+}
+
+export default function SuccessPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin" />
+            </div>
+        }>
+            <SuccessContent />
+        </Suspense>
     )
 }
