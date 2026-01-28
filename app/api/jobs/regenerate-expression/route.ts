@@ -192,14 +192,13 @@ export async function POST(request: Request) {
         const { error: updateError } = await supabase
             .from("jobs")
             .update({
-                expressions_urls: expressions,
-                updated_at: new Date().toISOString()
+                expressions_urls: expressions
             })
             .eq("id", jobId)
 
         if (updateError) {
-            console.error("Failed to update job:", updateError)
-            throw new Error("Failed to update database")
+            console.error("Failed to update job:", JSON.stringify(updateError, null, 2))
+            throw new Error(`Failed to update database: ${updateError.message || updateError.code}`)
         }
 
         console.log(`✅ Regenerated ${expressionName} successfully`)

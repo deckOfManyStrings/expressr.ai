@@ -212,8 +212,7 @@ export async function POST(request: Request) {
             .from("jobs")
             .update({
                 status: "complete",
-                expressions_urls: allExpressions,
-                updated_at: new Date().toISOString()
+                expressions_urls: allExpressions
             })
             .eq("id", jobId)
 
