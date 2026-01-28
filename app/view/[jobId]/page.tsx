@@ -199,10 +199,19 @@ export default function ViewPage() {
                                             fill
                                             className={`object-cover transition-transform duration-500
                                             ${isImageLocked ? "blur-md brightness-[0.4] scale-105" : "group-hover:scale-105"}
+                                            ${regenerating === (img.expression || img.name) ? "opacity-50" : ""}
                                         `}
                                             unoptimized
                                             loading={idx < 2 ? "eager" : "lazy"}
                                         />
+
+                                        {/* Regenerating Loader Overlay */}
+                                        {regenerating === (img.expression || img.name) && (
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-20">
+                                                <Loader2 className="w-12 h-12 animate-spin text-white mb-2" />
+                                                <span className="text-white text-sm font-medium">Regenerating...</span>
+                                            </div>
+                                        )}
 
                                         {isImageLocked ? (
                                             <div className="absolute inset-0 flex flex-col items-center justify-center text-white/90 gap-2">
