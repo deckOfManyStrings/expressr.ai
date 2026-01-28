@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { ArrowRight, Check, Upload, Sparkles, Download, Camera } from "lucide-react"
+import Link from "next/link"
 
 export default function Home() {
   const [email, setEmail] = useState("")
@@ -22,6 +23,11 @@ export default function Home() {
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
       <section className="relative px-6 pt-20 pb-24 text-center overflow-hidden bg-background">
+        <div className="absolute top-6 right-6 z-10">
+          <Link href="/login">
+            <Button variant="ghost" size="sm">My Photos</Button>
+          </Link>
+        </div>
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-secondary/10 -z-10" />
         <div className="max-w-3xl mx-auto space-y-6">
           <div className="inline-block px-3 py-1 mb-4 text-xs font-semibold tracking-wider text-primary uppercase bg-primary/10 rounded-full">
@@ -56,6 +62,15 @@ export default function Home() {
           <p className="text-xs text-muted-foreground">
             No credit card required • 3 free expressions
           </p>
+
+          {/* Hero Image */}
+          <div className="mt-12 max-w-4xl mx-auto">
+            <img
+              src="/hero-image.jpg"
+              alt="Transform your photos into 12 professional expressions"
+              className="w-full rounded-2xl shadow-2xl border border-border"
+            />
+          </div>
         </div>
       </section>
 
@@ -115,11 +130,12 @@ export default function Home() {
               ))}
             </div>
           </div>
-          <div className="relative aspect-square bg-muted rounded-3xl overflow-hidden border">
-            {/* Placeholder for feature image/grid */}
-            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-              [Expression Grid Image]
-            </div>
+          <div className="relative aspect-square bg-muted rounded-3xl overflow-hidden border shadow-xl">
+            <img
+              src="/expression-grid.jpg"
+              alt="4 different professional expressions - Happy, Smirking, Angry, and Sad"
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
       </section>

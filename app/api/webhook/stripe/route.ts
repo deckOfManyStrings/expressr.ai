@@ -47,8 +47,8 @@ export async function POST(request: Request) {
             await supabase
                 .from("jobs")
                 .update({
-                    paid: true,
-                    status: "generating_full",
+                    is_paid: true,
+                    status: "generating_premium",
                     stripe_session_id: session.id
                 })
                 .eq("id", jobId)

@@ -42,7 +42,7 @@ export async function POST(request: Request) {
                 .from("jobs")
                 .update({
                     status: "generating_free",
-                    model_url: modelUrl
+                    model_version: modelUrl
                 })
                 .eq("id", job.id)
 

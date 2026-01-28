@@ -1,12 +1,13 @@
 "use client"
 
-import { Suspense, useState } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { PhotoUploader } from "@/components/PhotoUploader"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
+import { ConfirmTrainingDialog } from "@/components/ConfirmTrainingDialog"
 
 // ... imports
 import { createClient } from "@/lib/supabase/client"
@@ -20,60 +21,84 @@ function CreatePageContent() {
     const router = useRouter()
     const [files, setFiles] = useState<File[]>([])
     const [isUploading, setIsUploading] = useState(false)
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+    const [hasSubmitted, setHasSubmitted] = useState(false)
+
+    // Check if user already submitted recently
+    useEffect(() => {
+        if (email) {
+            const key = `training_submitted_${email}`
+            const lastSubmit = localStorage.getItem(key)
+            if (lastSubmit) {
+                const timeSince = Date.now() - parseInt(lastSubmit)
+                if (timeSince < 30 * 60 * 1000) { // 30 minutes
+                    setHasSubmitted(true)
+                }
+            }
+        }
+    }, [email])
 
     const handleUpload = (uploadedFiles: File[]) => {
         setFiles(uploadedFiles)
     }
 
-    const handleGenerate = async () => {
+    const handleGenerateClick = () => {
         if (files.length < 10) {
             toast.error("Please upload at least 10 photos")
             return
         }
 
+        if (!email) {
+            toast.error("Email is required")
+            return
+        }
+
+        if (hasSubmitted) {
+            toast.error("You've already started training recently. Check your email for the status link.")
+            return
+        }
+
+        // Show confirmation dialog
+        setShowConfirmDialog(true)
+    }
+
+    const handleConfirmTraining = async () => {
+        setShowConfirmDialog(false)
         setIsUploading(true)
-        const toastId = toast.loading("Creating job...")
+        const toastId = toast.loading("Starting training...")
 
         try {
-            // 1. Create Job
-            const res = await fetch("/api/jobs/create", {
+            // Create FormData with email and photos
+            const formData = new FormData()
+            formData.append("email", email!)
+
+            files.forEach((file) => {
+                formData.append("photos", file)
+            })
+
+            // Start training
+            const res = await fetch("/api/train", {
                 method: "POST",
-                body: JSON.stringify({ email, fileCount: files.length }),
+                body: formData,
             })
 
-            if (!res.ok) throw new Error("Failed to create job")
-            const { jobId } = await res.json()
+            if (!res.ok) {
+                const error = await res.json()
+                throw new Error(error.error || "Failed to start training")
+            }
 
-            // 2. Upload Files
-            toast.loading("Uploading photos...", { id: toastId })
-            const supabase = createClient()
+            const { job_id } = await res.json()
 
-            const uploadPromises = files.map(async (file, index) => {
-                const ext = file.name.split(".").pop()
-                const path = `${jobId}/${index}.${ext}`
+            // Mark as submitted in localStorage
+            localStorage.setItem(`training_submitted_${email}`, Date.now().toString())
+            setHasSubmitted(true)
 
-                const { error } = await supabase.storage
-                    .from("uploads")
-                    .upload(path, file)
+            toast.success("Training started!", { id: toastId })
+            router.push(`/processing/${job_id}`)
 
-                if (error) throw error
-                return path
-            })
-
-            await Promise.all(uploadPromises)
-
-            // 3. Start Training (Day 2)
-            await fetch("/api/jobs/train", {
-                method: "POST",
-                body: JSON.stringify({ jobId })
-            })
-
-            toast.success("Photos uploaded!", { id: toastId })
-            router.push(`/status/${jobId}`)
-
-        } catch (error) {
+        } catch (error: any) {
             console.error(error)
-            toast.error("Something went wrong", { id: toastId })
+            toast.error(error.message || "Something went wrong", { id: toastId })
             setIsUploading(false)
         }
     }
@@ -105,14 +130,23 @@ function CreatePageContent() {
 
             {/* Instruction Tips */}
             <div className="space-y-3 text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950/20 p-4 rounded-xl">
-                <p className="font-medium text-blue-600 dark:text-blue-400">💡 Photo Tips:</p>
+                <p className="font-medium text-blue-600 dark:text-blue-400">💡 Photo Tips for Best Results:</p>
                 <ul className="space-y-1 list-disc list-inside">
-                    <li>Good lighting (no harsh shadows)</li>
-                    <li>Different angles (left, right, straight)</li>
-                    <li>Just you (no other people)</li>
-                    <li>No sunglasses or masks</li>
+                    <li><strong>Good lighting</strong> - Natural light works best, avoid harsh shadows</li>
+                    <li><strong>Multiple angles</strong> - Front, left, right, slight up/down</li>
+                    <li><strong>Clear face</strong> - No sunglasses, masks, or heavy filters</li>
+                    <li><strong>Solo shots</strong> - Just you, no other people in frame</li>
+                    <li><strong>Variety</strong> - Different backgrounds and expressions help</li>
+                    <li><strong>High quality</strong> - Clear, in-focus photos (not blurry)</li>
                 </ul>
             </div>
+
+            <ConfirmTrainingDialog
+                open={showConfirmDialog}
+                onConfirm={handleConfirmTraining}
+                onCancel={() => setShowConfirmDialog(false)}
+                photoCount={files.length}
+            />
 
             {/* Floating Bottom CTA for Mobile */}
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t safe-bottom z-10 sm:static sm:p-0 sm:bg-transparent sm:border-0">
@@ -120,10 +154,11 @@ function CreatePageContent() {
                     <Button
                         size="lg"
                         className="w-full text-lg shadow-lg shadow-primary/20"
-                        onClick={handleGenerate}
+                        onClick={handleGenerateClick}
+                        disabled={isUploading || hasSubmitted}
                     >
                         <Sparkles className="w-5 h-5 mr-2" />
-                        Generate My Expression Pack
+                        {hasSubmitted ? "Training Already Started" : "Generate My Expression Pack"}
                     </Button>
                 </div>
             </div>

@@ -53,14 +53,14 @@ export function PhotoUploader({
             toast.error(`${rejection.file.name}: ${rejection.errors[0].message}`)
         })
 
-        // Process new files
+        // Process new files (compress only, no validation)
         const processedFiles = await Promise.all(acceptedFiles.map(async (file) => {
             try {
                 const compressed = await compressImage(file)
                 return Object.assign(compressed, {
                     preview: URL.createObjectURL(compressed),
-                    id: Math.random().toString(36).substring(7),
-                    status: "pending" as const
+                    id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                    status: "valid" as const // Skip validation, mark as valid immediately
                 }) as FileWithPreview
             } catch (err) {
                 toast.error(`Failed to compress ${file.name}`)
@@ -70,46 +70,17 @@ export function PhotoUploader({
 
         const validFiles = processedFiles.filter((f): f is FileWithPreview => f !== null)
 
+        // Single state update to add files
         setFiles((prev) => {
             const updated = [...prev, ...validFiles].slice(0, maxFiles)
-            // Trigger validation simulation for new files
-            validateFiles(updated.filter(f => f.status === "pending"))
-            onUpload(updated) // Notify parent
+            // Trigger callback
+            setTimeout(() => {
+                onUpload(updated)
+            }, 0)
             return updated
         })
+
     }, [maxFiles, onUpload])
-
-    const validateFiles = async (filesToValidate: FileWithPreview[]) => {
-        // Mock validation
-        // In real app, this would call API
-
-        // Update status to validating
-        setFiles(prev => prev.map(f =>
-            filesToValidate.find(fv => fv.id === f.id)
-                ? { ...f, status: "validating" }
-                : f
-        ))
-
-        // Simulate delay and result
-        for (const file of filesToValidate) {
-            await new Promise(r => setTimeout(r, 800)) // Fake network delay
-
-            setFiles(prev => prev.map(f => {
-                if (f.id !== file.id) return f
-
-                // Mock logic: fail if name contains "fail"
-                const isValid = !f.name.toLowerCase().includes("fail")
-                return {
-                    ...f,
-                    status: isValid ? "valid" : "error",
-                    error: isValid ? undefined : "No face detected"
-                }
-            }))
-        }
-
-        // Notify parent
-        // onUpload(currentFiles)
-    }
 
     const removeFile = (id: string) => {
         setFiles(prev => {
@@ -183,33 +154,12 @@ export function PhotoUploader({
                             className="w-full h-full object-cover"
                         />
 
-                        {/* Status Indicator */}
+                        {/* Status Indicator - Just show checkmark for uploaded */}
                         <div className="absolute top-1 right-1">
-                            {file.status === "validating" && (
-                                <div className="bg-black/50 p-1 rounded-full backdrop-blur-sm">
-                                    <Loader2 className="w-3 h-3 text-white animate-spin" />
-                                </div>
-                            )}
-                            {file.status === "valid" && (
-                                <div className="bg-green-500 p-1 rounded-full shadow-sm">
-                                    <Check className="w-3 h-3 text-white" />
-                                </div>
-                            )}
-                            {file.status === "error" && (
-                                <div className="bg-destructive p-1 rounded-full shadow-sm">
-                                    <X className="w-3 h-3 text-white" />
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Error Message Link */}
-                        {file.status === "error" && (
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-2">
-                                <p className="text-[10px] text-white text-center font-medium leading-tight">
-                                    {file.error}
-                                </p>
+                            <div className="bg-green-500 p-1 rounded-full shadow-sm">
+                                <Check className="w-3 h-3 text-white" />
                             </div>
-                        )}
+                        </div>
 
                         {/* Remove Button */}
                         <button

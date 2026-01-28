@@ -8,8 +8,14 @@ export async function middleware(request: NextRequest) {
         },
     })
 
+    // Check for valid URL to avoid crash during setup
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_URL.startsWith('http')) {
+        console.warn("Supabase URL missing or invalid, skipping middleware auth check.")
+        return response
+    }
+
     const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
             cookies: {
