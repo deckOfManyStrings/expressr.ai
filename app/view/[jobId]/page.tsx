@@ -4,14 +4,14 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Download, Loader2, Share2, ArrowLeft, Lock } from "lucide-react"
+import { Download, Loader2, Share2, ArrowLeft, Lock, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { toast } from "sonner"
 
 type Job = {
     status: string
-    images: Array<{ expression: string, name?: string, url: string }>
+    images: Array<{ expression: string, name?: string, url: string, regenerationCount?: number }>
     error?: string
     is_paid: boolean
 }
@@ -23,6 +23,7 @@ export default function ViewPage() {
     const [job, setJob] = useState<Job | null>(null)
     const [loading, setLoading] = useState(true)
     const [checkingOut, setCheckingOut] = useState(false)
+    const [regenerating, setRegenerating] = useState<string | null>(null)
 
     useEffect(() => {
         let interval: NodeJS.Timeout
@@ -89,6 +90,46 @@ export default function ViewPage() {
             toast.error("Something went wrong")
         } finally {
             setCheckingOut(false)
+        }
+    }
+
+    const handleRegenerate = async (expressionName: string) => {
+        setRegenerating(expressionName)
+        try {
+            const res = await fetch("/api/jobs/regenerate-expression", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ jobId, expressionName }),
+            })
+
+            const data = await res.json()
+
+            if (!res.ok) {
+                toast.error(data.error || "Failed to regenerate")
+                return
+            }
+
+            // Update the job state with new image
+            if (job) {
+                const updatedImages = job.images.map(img => {
+                    if (img.expression === expressionName || img.name === expressionName) {
+                        return {
+                            ...img,
+                            url: data.newUrl,
+                            regenerationCount: data.regenerationCount
+                        }
+                    }
+                    return img
+                })
+                setJob({ ...job, images: updatedImages })
+            }
+
+            toast.success(`${expressionName} regenerated! (${data.remainingAttempts} attempts left)`)
+        } catch (error) {
+            console.error("Regeneration error:", error)
+            toast.error("Failed to regenerate expression")
+        } finally {
+            setRegenerating(null)
         }
     }
 
@@ -178,14 +219,34 @@ export default function ViewPage() {
                                                 >
                                                     <Download className="w-4 h-4" />
                                                 </Button>
+                                                <Button
+                                                    size="icon"
+                                                    variant="secondary"
+                                                    className="rounded-full"
+                                                    onClick={() => handleRegenerate(img.expression || img.name || '')}
+                                                    disabled={regenerating === (img.expression || img.name) || (img.regenerationCount || 0) >= 3}
+                                                >
+                                                    {regenerating === (img.expression || img.name) ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                    ) : (
+                                                        <RefreshCw className="w-4 h-4" />
+                                                    )}
+                                                </Button>
                                             </div>
                                         )}
                                     </CardContent>
                                     <div className="p-3 border-t bg-card relative z-10">
-                                        <p className="text-sm font-medium capitalize text-center flex items-center justify-center gap-1">
-                                            <span className="truncate">{img.expression || img.name || 'Expression'}</span>
-                                            {isImageLocked && <Lock className="w-3 h-3 text-muted-foreground" />}
-                                        </p>
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm font-medium capitalize flex items-center gap-1">
+                                                <span className="truncate">{img.expression || img.name || 'Expression'}</span>
+                                                {isImageLocked && <Lock className="w-3 h-3 text-muted-foreground" />}
+                                            </p>
+                                            {!isImageLocked && (
+                                                <span className="text-xs text-muted-foreground">
+                                                    {3 - (img.regenerationCount || 0)} left
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </Card>
                             )
