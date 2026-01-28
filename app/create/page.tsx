@@ -65,7 +65,6 @@ function CreatePageContent() {
     const handleConfirmTraining = async () => {
         setShowConfirmDialog(false)
         setIsUploading(true)
-        const toastId = toast.loading("Starting training...")
 
         try {
             // Create FormData with email and photos
@@ -93,12 +92,12 @@ function CreatePageContent() {
             localStorage.setItem(`training_submitted_${email}`, Date.now().toString())
             setHasSubmitted(true)
 
-            toast.success("Training started!", { id: toastId })
+            // toast.success("Training started!") 
             router.push(`/processing/${job_id}`)
 
         } catch (error: any) {
             console.error(error)
-            toast.error(error.message || "Something went wrong", { id: toastId })
+            toast.error(error.message || "Something went wrong")
             setIsUploading(false)
         }
     }
